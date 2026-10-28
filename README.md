@@ -70,6 +70,7 @@ python demo_server.py                       # http://127.0.0.1:8951/
 docs/PROTOCOL.md           ★ 实现手册：常量 / 信封 / 字段表 / 最小实现 / 必避坑
 docs/NEWAPI_INTEGRATION.md ★ 对接指南：new-api 接入机制 + 前置条件 + 三条路径 + 交接指令
 docs/REVERSE_REPORT.md     完整逆向报告（架构 / 加密 / 节点 / 实测 / 合规）
+docs/UNSOLVED-BEE1-BEE3.md ★ bee1/bee3 排查定论（12569 密码 × 800 参数 × 6 布局全负的证据链）
 
 tools/decrypt.py           加密方案最小实现 + CLI
 tools/harvest.py           节点字段全量解密 -> nodes_full.json

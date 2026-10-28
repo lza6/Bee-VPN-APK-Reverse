@@ -166,8 +166,24 @@ HysteriaOBFS   = sandoki
 
 ### 4.4 死资产与密钥不一致
 
-- `bee1.txt` / `bee3.txt`：API 可下载，但用两把已知密码 + salt 8~40 字节全偏移 + nonce 12/16 组合均无法通过 GCM 校验 → 应为其他版本/其他 App 的配置，密钥不同。
-- `assets/custom1.json` / `v2ray_config.json` / `v2inject.json`：无任何引用点。
+**`bee1.txt` / `bee3.txt`：密钥不在本 APK，已穷尽排除** —— 完整证据见
+**[docs/UNSOLVED-BEE1-BEE3.md](UNSOLVED-BEE1-BEE3.md)**。
+
+| 排除维度 | 覆盖范围 | 结果 |
+|---|---|---|
+| 密码候选 | **12,569 个**（`.rodata` 全量可打印串 + bee2 明文字段值 + 变体） | 全负 |
+| Argon2 参数 | 800 组（time 1~5 × memory 4~64 MiB × threads 1~4 × 2 密码 × 4 结构） | 全负 |
+| 结构布局 | 6 种（nonce-first / salt12/16/24/32 / tag-first） | 全负 |
+| KDF 变体 | PBKDF2(1k/10k/100k) + scrypt(1024/16384/32768) | 全负 |
+| 编码层 | 首尾偏移 17×17 + 字符集核查 | 全负 |
+| 密码常量遗漏 | `.rodata` 中 287 个"像密码"串逐个人工核对 | 只有 2 把，均已试 |
+
+关键事实：`bee3.txt` 长度 `mod 4 == 1`，**本身不是合法 base64**，App 自己也解不开。
+反向证据：同一代码路径解 `bee2.txt` 一次成功（623,367 B）→ 方案无误，只是密钥不匹配。
+判定：服务于其他产品线/其他版本客户端，或服务端已轮换密钥。
+若要解开 → 拿对应版本 APK 取新密码常量，或 arm64 真机 Frida hook（见该文档 §5）。
+
+- `assets/custom1.json` / `v2ray_config.json` / `v2inject.json`：无任何引用点（死资产）。
 
 ---
 

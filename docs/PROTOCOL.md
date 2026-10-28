@@ -190,11 +190,28 @@ App ──► SSH / SNI 注入隧道 ──► 本地 SOCKS 127.0.0.1:8888 ─�
 
 ## 6. 已知未解项
 
-| 项 | 状态 | 已排除的可能 |
+### 6.1 `bee1.txt` / `bee3.txt`：密钥不在本 APK
+
+完整证据链见 **[UNSOLVED-BEE1-BEE3.md](UNSOLVED-BEE1-BEE3.md)**。
+
+| 排除维度 | 覆盖范围 | 结果 |
 |---|---|---|
-| `bee1.txt` / `bee3.txt` | 未能解密 | 两把密码 × salt 8~40 B（4 步长）× nonce 12/16 × AAD∈{salt,nil} × 头部 0~8 字节 trim，全负 |
+| 密码候选 | 12,569 个（`.rodata` 全量可打印串 + bee2 明文字段 + 变体） | 全负 |
+| Argon2 参数 | 800 组（time 1~5 × memory 4~64 MiB × threads 1~4 × 2 密码 × 4 结构） | 全负 |
+| 结构布局 | 6 种（nonce-first / salt12/16/24/32 / tag-first） | 全负 |
+| KDF 变体 | PBKDF2(1k/10k/100k) + scrypt | 全负 |
+| 编码层 | 首尾偏移 17×17 + 字符集核查 | 全负 |
+
+**`bee3.txt` 长度 `mod 4 == 1`，本身不是合法 base64** —— App 自己也无法解码。
+判定：其他产品线/版本，或服务端已轮换密钥。解开的唯一路径是拿对应版本 APK，见该文档 §5。
+
+### 6.2 其他
+
+| 项 | 状态 | 依据 |
+|---|---|---|
 | `assets/custom1.json` / `v2ray_config.json` / `v2inject.json` | 死资产 | 全项目 `getAssets()` 无引用点 |
-| SSH 隧道层 payload | 未还原 | 各家域名已注销，无法再抓 |
+| SSH 隧道层 payload | 未还原 | 入口域名已注销，无样本 |
+| `TrojanPass` | 未利用 | 值 `TroJanP@ss`，本批无 Trojan 节点 |
 
 ---
 
