@@ -11,7 +11,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(ROOT, "nodes_full.json")
+# 完整数据（含明文凭证，gitignore）优先；新克隆的仓库只有脱敏版，自动回落
+for _cand in (os.path.join(ROOT, "data", "nodes_full.json"),
+              os.path.join(ROOT, "nodes_full.json"),
+              os.path.join(ROOT, "data", "nodes_redacted.json")):
+    if os.path.exists(_cand):
+        DATA = _cand
+        break
+else:
+    raise SystemExit("找不到节点数据：先跑 python tools/harvest.py 生成 data/nodes_full.json")
+DATA_SOURCE = os.path.basename(DATA)
 PORT = int(os.environ.get("PORT", 8951))
 
 with open(DATA, encoding="utf8") as f:
@@ -102,6 +111,7 @@ class Handler(BaseHTTPRequestHandler):
             from collections import Counter
             self._json({
                 "meta": POOL["meta"],
+                "data_source": DATA_SOURCE,
                 "total": len(NODES),
                 "by_protocol": Counter(n["protocol"] for n in NODES),
                 "by_type": Counter(n["type"] for n in NODES),
@@ -128,7 +138,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     print(f"[demo] Bee VPN node pool demo  ->  http://127.0.0.1:{PORT}/")
-    print(f"[demo] nodes={len(NODES)}  protocols={sorted({n['protocol'] for n in NODES})}")
+    print(f"[demo] data={DATA_SOURCE} nodes={len(NODES)}  protocols={sorted({n['protocol'] for n in NODES})}")
     srv.serve_forever()
 
 if __name__ == "__main__":
