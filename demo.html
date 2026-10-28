@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Bee VPN 节点池 · 逆向 Demo</title>
+<style>
+  :root{--bg:#0e1116;--card:#161b22;--line:#252c36;--fg:#e6edf3;--dim:#8b949e;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--acc:#58a6ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+  header{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  h1{font-size:18px;margin:0;font-weight:600}
+  .sub{color:var(--dim);font-size:12px}
+  .wrap{padding:20px 24px;max-width:1400px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+  .card .k{color:var(--dim);font-size:12px}
+  .card .v{font-size:22px;font-weight:600;margin-top:4px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  button{background:#21262d;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px}
+  button:hover{border-color:var(--acc)}
+  button.on{background:#1f6feb;border-color:#1f6feb}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--dim);font-weight:500;position:sticky;top:0;background:var(--bg)}
+  tr:hover td{background:#12171d}
+  .tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--line)}
+  .p-V2ray{color:#58a6ff;border-color:#1f6feb55}
+  .p-OVPN{color:#d29922;border-color:#d2992255}
+  .p-UDPHysteria{color:#bc8cff;border-color:#bc8cff55}
+  .p-SSH{color:#3fb950;border-color:#3fb95055}
+  .p-DNSTT{color:#8b949e}
+  .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)} .dim{color:var(--dim)}
+  #log{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:180px;overflow:auto;font-family:ui-monospace,monospace;font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bee VPN 节点池</h1>
+  <span class="sub">co.strongteam.beevpn · 配置解密演示 · 仅本地研究</span>
+</header>
+<div class="wrap">
+  <div class="cards" id="cards"></div>
+  <div class="bar">
+    <button data-f="all" class="on">全部</button>
+    <button data-f="V2ray">V2ray</button>
+    <button data-f="OVPN">OVPN</button>
+    <button data-f="UDP Hysteria">Hysteria2</button>
+    <button data-f="SSH">SSH</button>
+    <button data-f="DNSTT">DNSTT</button>
+    <button id="probeAll">测活当前列表</button>
+  </div>
+  <table>
+    <thead><tr>
+      <th>#</th><th>协议</th><th>类型</th><th>地区</th><th>名称</th><th>主机</th><th>端口</th><th>带宽/sni</th><th>测活</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="log">就绪。</div>
+</div>
+<script>
+let ALL=[], FILTER='all', RESULT={};
+async function boot(){
+  const st = await (await fetch('/api/stats')).json();
+  const byp = st.by_protocol;
+  document.getElementById('cards').innerHTML = [
+    ['节点总数', st.total],
+    ['唯一主机', st.unique_hosts],
+    ['V2ray', byp['V2ray']||0],
+    ['OVPN', byp['OVPN']||0],
+    ['Hysteria2', byp['UDP Hysteria']||0],
+    ['SSH/DNSTT', (byp['SSH']||0)+(byp['DNSTT']||0)],
+    ['配置版本', st.meta.Version||'-'],
+  ].map(([k,v])=>`<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  const r = await (await fetch('/api/nodes')).json();
+  ALL = r.nodes; render();
+}
+function tagCls(p){ return 'p-'+String(p).replace(/\s+/g,''); }
+function portOf(n){ return n.protocol==='UDP Hysteria' ? (n.udp_port||'443') : (n.ssl_port||'443'); }
+function render(){
+  const list = FILTER==='all' ? ALL : ALL.filter(n=>n.protocol===FILTER);
+  document.getElementById('rows').innerHTML = list.map(n=>{
+    const res = RESULT[n.hosts[0]] || '';
+    const bw = n.protocol==='V2ray' ? (n.v2ray?.path||'') : (n.protocol==='UDP Hysteria' ? ('obfs '+ (n.hy2?.obfs||'')) : '');
+    return `<tr>
+      <td class="dim">${n.id}</td>
+      <td><span class="tag ${tagCls(n.protocol)}">${n.protocol}</span></td>
+      <td class="dim">${n.type}</td>
+      <td>${(n.flag||'').toUpperCase()}</td>
+      <td>${n.name||'-'}</td>
+      <td class="mono">${n.hosts.join('<br>')}</td>
+      <td class="mono">${portOf(n)}</td>
+      <td class="mono dim">${bw}</td>
+      <td class="mono">${res}</td>
+    </tr>`;
+  }).join('');
+}
+async function probeAll(){
+  const list = FILTER==='all' ? ALL : ALL.filter(n=>n.protocol===FILTER);
+  const log = document.getElementById('log'); log.textContent='';
+  let ok=0, n=0;
+  for(const node of list){
+    n++;
+    const h = node.hosts[0], p = portOf(node);
+    let txt;
+    try{
+      const r = await (await fetch(`/api/probe?host=${encodeURIComponent(h)}&port=${p}`)).json();
+      if(r.ok){ ok++; txt = `<span class="ok">TCP ${r.ms}ms</span> <span class="${r.tls==='ok'?'ok':'warn'}">${r.tls}</span>`; }
+      else txt = `<span class="bad">${r.stage.toUpperCase()}</span> ${r.err||''}`;
+    }catch(e){ txt = '<span class="bad">ERR</span>'; }
+    RESULT[h]=txt;
+    log.innerHTML += `[${n}/${list.length}] ${h}:${p} → ${txt.replace(/<[^>]+>/g,'')}\n`;
+  }
+  render();
+  document.getElementById('log').textContent = `完成 ${list.length} 个，TCP 可达 ${ok} 个。`;
+}
+document.querySelectorAll('.bar button[data-f]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.bar button[data-f]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); FILTER=b.dataset.f; render();
+});
+document.getElementById('probeAll').onclick = probeAll;
+boot();
+</script>
+</body>
+</html>

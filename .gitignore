@@ -1,0 +1,49 @@
+# 凭证与运行期产物（绝不入库）
+nodes_full.json
+data/plain_bee2.txt
+bee2.plain
+bee2.txt
+dl_bee*.txt
+*.cred
+ovpn/*.ovpn
+ovpn/manifest.json
+plain_*.bin
+plain_*.txt
+config_plain.bin
+proxies.txt
+account.json
+recon/
+output/
+
+# 逆向中间产物
+jadx_out/
+dex/
+libs/
+*.so
+*.apk
+dex_strings.txt
+go_funcs.txt
+nm.txt
+pclntab.bin
+*.log
+!data/*.log
+
+# 环境
+__pycache__/
+*.pyc
+.venv/
+
+# 根目录一次性分析脚本（保留 demo_server.py）
+/*.py
+!/demo_server.py
+/tools/*.py
+!/tools/decrypt.py
+!/tools/harvest.py
+!/tools/bench.py
+!/tools/probe_ws.py
+!/tools/socks_layer.py
+*.bak
+*.err
+*.json
+!/data/*.json
+/data/*_full.json
